@@ -36,31 +36,35 @@ public sealed class IncidentQueries(
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<IncidentSeveritySummaryResponse>> GetSeveritySummaryAsync(
-        CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<IncidentSeveritySummaryResponse>> GetSeveritySummaryAsync(CancellationToken cancellationToken = default)
+{
+    // 1. Отримуємо дані з БД без відстеження та групуємо за Severity
+    var dbCounts = await _dbContext.Incidents
+        .AsNoTracking()
+        .GroupBy(i => i.Severity)
+        .Select(g => new
+        {
+            Severity = g.Key,
+            Count = g.Count()
+        })
+        .ToListAsync(cancellationToken);
+
+    // 2. Створюємо словник для зручного пошуку
+    var countsDict = dbCounts.ToDictionary(x => x.Severity, x => x.Count);
+
+    // 3. Доповнюємо відсутні групи нулями та формуємо сталий порядок
+    var allSeverities = Enum.GetValues<Severity>();
+    var result = new List<IncidentSeveritySummaryResponse>();
+
+    foreach (var severity in allSeverities)
     {
-        var grouped = await dbContext.Incidents
-            .AsNoTracking()
-            .GroupBy(incident => incident.Severity)
-            .Select(group => new IncidentSeveritySummaryResponse(
-                group.Key.ToString(),
-                group.Count()))
-            .ToListAsync(cancellationToken);
-
-        var groupedBySeverity = grouped.ToDictionary(item => item.Severity);
-
-        var summary = SeverityOrder
-            .Select(level => groupedBySeverity.TryGetValue(level, out var existing)
-                ? existing
-                : new IncidentSeveritySummaryResponse(level, 0))
-            .ToList();
-
-        logger.LogInformation(
-            "Incident severity summary computed: {GroupCount} groups in criticality order",
-            summary.Count);
-
-        return summary;
+        var severityString = severity.ToString();
+        var count = countsDict.TryGetValue(severity, out var c) ? c : 0;
+        result.Add(new IncidentSeveritySummaryResponse(severityString, count));
     }
+
+    return result;
+}
 
     public Task<IncidentDetailsResponse?> GetDetailsAsync(Guid id, CancellationToken cancellationToken)
     {

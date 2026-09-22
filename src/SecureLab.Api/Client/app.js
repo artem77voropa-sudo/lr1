@@ -5,8 +5,6 @@ const filterForm = document.querySelector("#filter-form");
 const summaryButton = document.querySelector("#summary-button");
 const summaryStatusElement = document.querySelector("#summary-status");
 const summaryListElement = document.querySelector("#severity-summary-list");
-const summaryContainer = document.querySelector("#severity-summary");
-const summaryHeading = document.querySelector("#summary-heading");
 
 async function apiFetch(path, options = {}) {
   const response = await fetch(path, {
@@ -91,13 +89,16 @@ function renderSeveritySummary(summary) {
     return;
   }
 
+  // Очищаємо статус у разі успішного завантаження даних
+  summaryStatusElement.textContent = "";
+
   for (const entry of summary) {
     const item = document.createElement("li");
     item.append(
       createTextElement("span", entry.severity, "summary-severity"),
       createTextElement(
         "span",
-        `— ${entry.count} ${entry.count === 1 ? "інцидент" : entry.count < 5 ? "інциденти" : "інцидентів"}`,
+        ` — ${entry.count} ${entry.count === 1 ? "інцидент" : entry.count > 1 && entry.count < 5 ? "інциденти" : "інцидентів"}`,
         "summary-count",
       ),
     );
@@ -110,7 +111,8 @@ async function loadSeveritySummary() {
   summaryListElement.replaceChildren();
 
   try {
-    renderSeveritySummary(await apiFetch("/api/incidents/severity-summary"));
+    const summary = await apiFetch("/api/incidents/severity-summary");
+    renderSeveritySummary(summary);
   } catch (error) {
     summaryStatusElement.textContent = `Помилка: ${error.message}`;
   }
@@ -141,7 +143,7 @@ async function loadIncidentDetails(id) {
   }
 }
 
-filterForm.addEventListener("submit", (event) => {
+filterForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   loadIncidents();
 });
@@ -150,4 +152,5 @@ summaryButton?.addEventListener("click", () => {
   loadSeveritySummary();
 });
 
+// Первинне завантаження списку інцидентів
 loadIncidents();

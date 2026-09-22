@@ -25,6 +25,8 @@ Accept: application/json
 GET {{host}}/api/incidents?status=Unknown
 Accept: application/json
 
-### Lab 1: severity-summary now implemented — expects 200 with all levels
+### Lab 1 extension point: expected 501 before student implementation
+# Контракт: повертає масив об'єктів ізгрупованих за рівнем критичності (severity) та їх кількістю (count)
+# Приклад очікуваної відповіді: [{"severity": "High", "count": 2}, {"severity": "Medium", "count": 5}]
 GET {{host}}/api/incidents/severity-summary
 Accept: application/json

@@ -24,9 +24,6 @@ public sealed record IncidentCommentResponse(
     string AuthorDisplayName,
     string Text,
     DateTimeOffset CreatedAtUtc);
-
-/// <summary>
-/// Контракт «нормативного» рівня для підсумку інцидентів за severity.
-/// Повертає лише пару severity + count; жодних полів entity (owner, description тощо).
-/// </summary>
-public sealed record IncidentSeveritySummaryResponse(string Severity, int Count);
+public sealed record IncidentSeveritySummaryResponse(
+    string Severity,
+    int Count);
