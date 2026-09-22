@@ -2,6 +2,11 @@ const listElement = document.querySelector("#incident-list");
 const listStatusElement = document.querySelector("#list-status");
 const detailsElement = document.querySelector("#incident-details");
 const filterForm = document.querySelector("#filter-form");
+const summaryButton = document.querySelector("#summary-button");
+const summaryStatusElement = document.querySelector("#summary-status");
+const summaryListElement = document.querySelector("#severity-summary-list");
+const summaryContainer = document.querySelector("#severity-summary");
+const summaryHeading = document.querySelector("#summary-heading");
 
 async function apiFetch(path, options = {}) {
   const response = await fetch(path, {
@@ -78,6 +83,39 @@ function renderIncidentDetails(incident) {
   detailsElement.replaceChildren(heading, metadata, description, commentsHeading, comments);
 }
 
+function renderSeveritySummary(summary) {
+  summaryListElement.replaceChildren();
+
+  if (summary.length === 0) {
+    summaryStatusElement.textContent = "Даних для підсумку немає.";
+    return;
+  }
+
+  for (const entry of summary) {
+    const item = document.createElement("li");
+    item.append(
+      createTextElement("span", entry.severity, "summary-severity"),
+      createTextElement(
+        "span",
+        `— ${entry.count} ${entry.count === 1 ? "інцидент" : entry.count < 5 ? "інциденти" : "інцидентів"}`,
+        "summary-count",
+      ),
+    );
+    summaryListElement.append(item);
+  }
+}
+
+async function loadSeveritySummary() {
+  summaryStatusElement.textContent = "Завантаження…";
+  summaryListElement.replaceChildren();
+
+  try {
+    renderSeveritySummary(await apiFetch("/api/incidents/severity-summary"));
+  } catch (error) {
+    summaryStatusElement.textContent = `Помилка: ${error.message}`;
+  }
+}
+
 async function loadIncidents() {
   listStatusElement.textContent = "Завантаження…";
   listElement.replaceChildren();
@@ -106,6 +144,10 @@ async function loadIncidentDetails(id) {
 filterForm.addEventListener("submit", (event) => {
   event.preventDefault();
   loadIncidents();
+});
+
+summaryButton?.addEventListener("click", () => {
+  loadSeveritySummary();
 });
 
 loadIncidents();

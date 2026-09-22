@@ -5,8 +5,13 @@ using SecureLab.Api.Presentation.Contracts;
 
 namespace SecureLab.Api.Application.Incidents;
 
-public sealed class IncidentQueries(SecureLabDbContext dbContext, ILogger<IncidentQueries> logger)
+public sealed class IncidentQueries(
+    SecureLabDbContext dbContext,
+    ILogger<IncidentQueries> logger)
 {
+    private static readonly IReadOnlyList<string> SeverityOrder =
+        Enum.GetValues<IncidentSeverity>().Select(severity => severity.ToString()).ToList();
+
     public async Task<IReadOnlyList<IncidentListItemResponse>> GetListAsync(
         IncidentStatus? status,
         CancellationToken cancellationToken)
@@ -29,6 +34,32 @@ public sealed class IncidentQueries(SecureLabDbContext dbContext, ILogger<Incide
                 incident.OccurredAtUtc,
                 incident.CreatedAtUtc))
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<IncidentSeveritySummaryResponse>> GetSeveritySummaryAsync(
+        CancellationToken cancellationToken)
+    {
+        var grouped = await dbContext.Incidents
+            .AsNoTracking()
+            .GroupBy(incident => incident.Severity)
+            .Select(group => new IncidentSeveritySummaryResponse(
+                group.Key.ToString(),
+                group.Count()))
+            .ToListAsync(cancellationToken);
+
+        var groupedBySeverity = grouped.ToDictionary(item => item.Severity);
+
+        var summary = SeverityOrder
+            .Select(level => groupedBySeverity.TryGetValue(level, out var existing)
+                ? existing
+                : new IncidentSeveritySummaryResponse(level, 0))
+            .ToList();
+
+        logger.LogInformation(
+            "Incident severity summary computed: {GroupCount} groups in criticality order",
+            summary.Count);
+
+        return summary;
     }
 
     public Task<IncidentDetailsResponse?> GetDetailsAsync(Guid id, CancellationToken cancellationToken)

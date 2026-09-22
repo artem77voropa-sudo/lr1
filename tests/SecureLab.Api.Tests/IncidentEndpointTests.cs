@@ -46,6 +46,19 @@ public sealed class IncidentEndpointTests(SecureLabApiFactory factory)
     }
 
     [Fact]
+    public async Task GetSeveritySummary_ReturnsAllLevelsInCriticalityOrder()
+    {
+        var summary = await _client.GetFromJsonAsync<List<IncidentSeveritySummaryResponse>>(
+            "/api/incidents/severity-summary");
+
+        Assert.NotNull(summary);
+        Assert.Equal(
+            new[] { "Low", "Medium", "High", "Critical" },
+            summary.Select(item => item.Severity).ToArray());
+        Assert.Contains(summary, item => item.Severity == "Critical" && item.Count == 0);
+    }
+
+    [Fact]
     public async Task ClientScript_DoesNotUseDangerousInnerHtmlSink()
     {
         var script = await _client.GetStringAsync("/app.js");
